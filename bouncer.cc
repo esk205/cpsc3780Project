@@ -15,6 +15,7 @@
 #include <ctime>
 #include <cerrno>
 #include <cstring>
+#include <fstream>
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -28,7 +29,7 @@
 
 /* Cmd line arguments: bouncer destination_addr */
 
-#define MAXBUFLEN 100
+#define MAXBUFLEN 512 // Read at most 512 bytes?
 
 /* Since we use threads, we declare some global variables first. 
 It works just fine to declare the globals outside of a struct, but gathered in a struct just feels you are more in control :) 
@@ -61,6 +62,7 @@ void *get_in_addr(struct sockaddr *sa)
 // return
 //   -1 on error
 //   the socked descriptor if OK
+// create_sock_recv is the receiver function
 int create_sock_recv(int family, const char * port) {
   struct addrinfo hints, *servinfo, *p;
   int rv;
@@ -112,6 +114,7 @@ int create_sock_recv(int family, const char * port) {
 // return
 //   -1 on error
 //   the socked descriptor if OK
+// this is the sender function
 int create_sock_send(int family, const char * port, const char * dest_host) {
   int sockfd;
   struct addrinfo hints, *servinfo, *p;
@@ -155,12 +158,22 @@ int create_sock_send(int family, const char * port, const char * dest_host) {
 // ********** the workers ***********
 // the sender thread;
 // sockfd: socket opened for sending the datagrams
+// From the sender thread, read at most 512 bytes from the
+// start of the file given as argument. Calculate the CRC32 value for the data read and output
+// it.
 void send_thread(int sockfd) {
   int numbytes;
-  char buf[MAXBUFLEN];
+  char buf[MAXBUFLEN]; // 512?
   // create a mutex and a lock for the condition variable
   std::mutex mtx;
   std::unique_lock<std::mutex> lock(mtx);
+
+  // open file in binary mode
+  of.open("one.bin", std::ios::binary | std::ios::out);
+  if (of.fail()) {
+    std::cout << "Cannot create file" << std::endl;
+    return 1;
+  }
 
   while (1) {
     // send then wait on cv
@@ -209,7 +222,10 @@ void recv_thread(int sockfd) {
   }
 }
 
-
+/*
+First, modify the main function to handle the optional file parameter
+from the project documentation. Open the file for reading as a binary file.
+*/
 // cmd line: bouncer destination
 int main(int argc, const char* argv[])
 {
@@ -239,10 +255,17 @@ int main(int argc, const char* argv[])
 
   tsender.join();
   treceiver.join();
-
+  
+  // write 20 bytes in it
+  char buf[SZ];
+  for (int i = 0; i <= SZ; i++) {
+    buf[i] = i;
+  }
+  of.write(buf, SZ);
 
   close(sock_send);
   close(sock_recv);
+  of.close();
 
   return 0;
 }
