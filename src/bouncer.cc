@@ -29,7 +29,7 @@
 #define DESTPORT "5000"  // the port where we send packets
 
 /* Cmd line arguments: bouncer destination_addr */
-// hello world
+// testing commit
 
 #define MAXBUFLEN 512 // Read at most 512 bytes?
 #define SZ 20 // buffer size in main
