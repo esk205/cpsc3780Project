@@ -28,6 +28,10 @@
 #define MYPORT "5010"	// the port on which we receive
 #define DESTPORT "5000"  // the port where we send packets
 
+// How to compile bouncer.cc
+// Step 1) Run in terminal g++ -o bouncer bouncer.cc -lpthread -lz
+// Step 2) Run the generated executable bouncer by running ./bouncer
+
 /* Cmd line arguments: bouncer destination_addr */
 // testing commit1
 
@@ -164,15 +168,21 @@ int create_sock_send(int family, const char * port, const char * dest_host) {
 // From the sender thread, read at most 512 bytes from the
 // start of the file given as argument. Calculate the CRC32 value for the data read and output
 // it.
+/*
+Calculate the CRC32 value for the data read and output it.
+Remove the CRC32 output from the sender thread and, using the code you developed for
+Project Assignment 1, assemble ONE valid DATA packet, and send it from the sender thread,
+to the destination and port given as command line arguments. Maintain the timeout pro-
+tection available from PA2.
+*/
 void send_thread(int sockfd) {
   std::ofstream of;
   int numbytes;
-  char buf[MAXBUFLEN]; // 512?
+  char buf[MAXBUFLEN]; // read at most 512 bytes
   buf[512] = '\0';
   char* bufPtr = buf;
   unsigned long crc;
   crc=crc32(0L, NULL, 0);
-
   // create a mutex and a lock for the condition variable
   std::mutex mtx;
   std::unique_lock<std::mutex> lock(mtx);
@@ -188,7 +198,9 @@ void send_thread(int sockfd) {
     // send then wait on cv
     buf[0] = gl.value;
     // crc = crc32(crc, reinterpret_cast<const Bytef*>(s.c_str()), s.size());
+    // calculate the crc32 val
     crc = crc32(crc, reinterpret_cast<const Bytef*>(bufPtr), MAXBUFLEN);
+    std::cout<<"\nThis is the value of crc " << crc << std::endl;
     if (send(sockfd, buf, 1, 0) != 1) {
       std::cerr << "Sender thread: " << std::strerror(errno) << std::endl;
     }
