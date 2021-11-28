@@ -29,25 +29,26 @@
 #define DESTPORT "5000"  // the port where we send packets
 
 /* Cmd line arguments: bouncer destination_addr */
+// hello world
 
 #define MAXBUFLEN 512 // Read at most 512 bytes?
 #define SZ 20 // buffer size in main
 
-/* Since we use threads, we declare some global variables first. 
-It works just fine to declare the globals outside of a struct, but gathered in a struct just feels you are more in control :) 
+/* Since we use threads, we declare some global variables first.
+It works just fine to declare the globals outside of a struct, but gathered in a struct just feels you are more in control :)
 */
 
 struct globals_t {
   unsigned char value='a';  // the byte value being sent
   std::condition_variable cv_timer;  // for the timed wait
-  // protect concurrent access by the other thread; 
-  std::mutex exclude_other_mtx;  
-  
+  // protect concurrent access by the other thread;
+  std::mutex exclude_other_mtx;
+
 };
 
 struct globals_t gl;
 
-// get sockaddr, IPv4 or IPv6: 
+// get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
 {
 	if (sa->sa_family == AF_INET) {
@@ -70,7 +71,7 @@ int create_sock_recv(int family, const char * port) {
   int rv;
 
   int the_sock;
-  
+
     // start with the hints (local address, UDP, etc
   memset(&hints, 0, sizeof hints);
   hints.ai_family = family; // set to AF_INET to use IPv4
@@ -95,7 +96,7 @@ int create_sock_recv(int family, const char * port) {
       std::cerr << "recv socket bind: " << std::strerror(errno) << std::endl;
       continue;
     }
-    
+
     break;
   }
 
@@ -138,7 +139,7 @@ int create_sock_send(int family, const char * port, const char * dest_host) {
       std::cerr << "send socket: " << std::strerror(errno) << std::endl;
       continue;
     }
-    
+
     break;
   }
 
@@ -171,11 +172,11 @@ void send_thread(int sockfd) {
   char* bufPtr = buf;
   unsigned long crc;
   crc=crc32(0L, NULL, 0);
-  
+
   // create a mutex and a lock for the condition variable
   std::mutex mtx;
   std::unique_lock<std::mutex> lock(mtx);
-  
+
   // open file in binary mode
   of.open("one.bin", std::ios::binary | std::ios::out);
   if (of.fail()) {
@@ -248,7 +249,7 @@ int main(int argc, const char* argv[])
     std::cerr << "Usage: " << argv[0] << " destination_addr" << std::endl;
     return 2;
   }
-  
+
   // args: family, port as string
   if ((sock_recv = create_sock_recv(AF_INET, MYPORT)) < 0) {
     std::cerr << "I failed" << std::endl;
@@ -260,16 +261,16 @@ int main(int argc, const char* argv[])
     std::cerr << "I failed" << std::endl;
     return 1;
   }
-  
+
   // start the threads
   std::thread tsender(send_thread, sock_send);
   std::thread treceiver(recv_thread, sock_recv);
 
   tsender.join();
   treceiver.join();
-  
+
   // write 20 bytes in it
- 
+
   for (int i = 0; i <= SZ; i++) {
     buf[i] = i;
   }
