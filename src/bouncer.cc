@@ -201,25 +201,29 @@ void send_thread(int sockfd) {
   SimpleHeader* h_ = new SimpleHeader;
   // Set packet object values
   // set Type
-  // h_->setType(2);
+  h_->setType(2);
   // set TR
-  // h_->setTR(1);
+  h_->setTR(1);
   // set Window
-  // h_->setWindow(5);
+  h_->setWindow(5);
   // set Seq num
-  // h_->setSeqNum(5);
+  h_->setSeqNum(5);
   // set Length
   // set Payload
-  // h_->setPayloadLength(0x1234);
-  // h_->setPayload('a', 0);
+  h_->setPayloadLength(0x1234);
+  h_->setPayload('a', 0);
   // do packet function call
   //h_->thePacket() = &bufPtr;
 
   //const char* charPacketSize = h_->totalPacketSize(); // unsigned int to char*
-  const char* packetSize = reinterpret_cast<const char*>(h_->totalPacketSize()); // char* to unsigned int
+  std::cout << "The value of packetSize is " << h_->totalPacketSize() << std::endl;
+  //std::cout << "The length of packetSize is " << strlen(h_->totalPacketSize()) << std::endl;
 
+//  const char* packetSize = h_->totalPacketSize();
+  unsigned int packetSize = reinterpret_cast<unsigned int>(h_->totalPacketSize()); // char* to unsigned int
+  std::cout << "The new value of packetSize is " << packetSize << std::endl;
   // unsigned int to const char*
-  sendto(sockfd, (const char*) h_->thePacket(), strlen(packetSize), 0, res->ai_addr, res->ai_addrlen);
+  sendto(sockfd, (const char*) h_->thePacket(), packetSize, 0, res->ai_addr, res->ai_addrlen);
   //sendto(sockfd, (const char *) hello, strlen(hello),
           // 0, res->ai_addr, res->ai_addrlen);
   // Send packet buffer into the sendto or send socket function
