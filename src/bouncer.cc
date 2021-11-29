@@ -214,9 +214,12 @@ void send_thread(int sockfd) {
   // h_->setPayload('a', 0);
   // do packet function call
   //h_->thePacket() = &bufPtr;
-  char* charPacketSize = h_->totalPacketSize();
-  unsigned int intPacketSize = reinterpret_cast<unsigned int>(charPacketSize);
-  sendto(sockfd, (const char*) h_->thePacket(), strlen(intPacketSize), 0, res->ai_addr, res->ai_addrlen);
+
+  //const char* charPacketSize = h_->totalPacketSize(); // unsigned int to char*
+  const char* packetSize = reinterpret_cast<const char*>(h_->totalPacketSize()); // char* to unsigned int
+
+  // unsigned int to const char*
+  sendto(sockfd, (const char*) h_->thePacket(), strlen(packetSize), 0, res->ai_addr, res->ai_addrlen);
   //sendto(sockfd, (const char *) hello, strlen(hello),
           // 0, res->ai_addr, res->ai_addrlen);
   // Send packet buffer into the sendto or send socket function
