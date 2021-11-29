@@ -7,7 +7,6 @@
 // size of header
 #define HEADER_SZ 4
 
-
 struct simplepacket {
   uint8_t header[HEADER_SZ]; // Each position in the array is 8 bits
   char data[DATA_SZ];  // payload

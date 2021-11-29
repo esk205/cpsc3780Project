@@ -29,7 +29,7 @@
 #define DESTPORT "5000"  // the port where we send packets
 
 // How to compile bouncer.cc
-// Step 1) Run in terminal g++ -o bouncer bouncer.cc -lpthread -lz
+// Step 1) Run in terminal g++ -o bouncer bouncer.cc SimpleHeader.cc -lpthread -lz
 // Step 2) Run the generated executable bouncer by running ./bouncer
 
 /* Cmd line arguments: bouncer destination_addr */
