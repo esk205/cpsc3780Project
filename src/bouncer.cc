@@ -24,6 +24,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <SimpleHeader.h>
 
 #define MYPORT "5010"	// the port on which we receive
 #define DESTPORT "5000"  // the port where we send packets
@@ -187,6 +188,24 @@ void send_thread(int sockfd) {
   std::mutex mtx;
   std::unique_lock<std::mutex> lock(mtx);
 
+  // create a packet object
+  // SimpleHeader h_;
+  // Set packet object values
+  // set Type
+  // h_->setType(2);
+  // set TR
+  // h_->setTR(1);
+  // set Window
+  // h_->setWindow(5);
+  // set Seq num
+  // h_->setSeqNum(5);
+  // set Length
+  // set Payload
+  // h_->setPayloadLength(0x1234);
+  // h_->setPayload('a', 0);
+  // Send packet
+
+
   // open file in binary mode
   of.open("one.bin", std::ios::binary | std::ios::out);
   if (of.fail()) {
@@ -197,7 +216,6 @@ void send_thread(int sockfd) {
   while (1) {
     // send then wait on cv
     buf[0] = gl.value;
-    // crc = crc32(crc, reinterpret_cast<const Bytef*>(s.c_str()), s.size());
     // calculate the crc32 val
     crc = crc32(crc, reinterpret_cast<const Bytef*>(bufPtr), MAXBUFLEN);
     std::cout<<"\nThis is the value of crc " << crc << std::endl;
