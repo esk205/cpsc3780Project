@@ -5,7 +5,6 @@
 // The sender sends a UDP packet every second. Waiting is performed on a condition variable, so the thread can wake up if the receiver receives something. The sender sends a single byte as payload, taken from the global value field.
 // The receiver changes this global value upon receipt of a packet; it then notifies the sender who will send a new packet using the updated value.
 
-
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -24,7 +23,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <SimpleHeader.h>
+#include "SimpleHeader.h"
 
 #define MYPORT "5010"	// the port on which we receive
 #define DESTPORT "5000"  // the port where we send packets
@@ -74,7 +73,6 @@ void *get_in_addr(struct sockaddr *sa)
 int create_sock_recv(int family, const char * port) {
   struct addrinfo hints, *servinfo, *p;
   int rv;
-
   int the_sock;
 
     // start with the hints (local address, UDP, etc
@@ -183,13 +181,24 @@ void send_thread(int sockfd) {
   buf[512] = '\0';
   char* bufPtr = buf;
   unsigned long crc;
+  struct addrinfo hints, *res;
   crc=crc32(0L, NULL, 0);
   // create a mutex and a lock for the condition variable
   std::mutex mtx;
   std::unique_lock<std::mutex> lock(mtx);
 
+  /*
+    Therefore, you create a header object (use the header class you tested in Project Assignment 1), then pass
+    the entire buffer to the sendto or send socket function. First, just implement the send. You can receive
+    with netcat, dump the packet to a file, and examine the file with hexdump to make sure the packet looks all right.
+
+    So, in this first attempt, you do not need any getter functions from the header class, just setters. Remember
+    that the sample header class I provided had a function that returns a pointer to the entire packet. You can use that
+    function in the sendto call.
+  */
+
   // create a packet object
-  // SimpleHeader h_;
+  SimpleHeader* h_ = new SimpleHeader;
   // Set packet object values
   // set Type
   // h_->setType(2);
@@ -203,7 +212,15 @@ void send_thread(int sockfd) {
   // set Payload
   // h_->setPayloadLength(0x1234);
   // h_->setPayload('a', 0);
-  // Send packet
+  // do packet function call
+  //h_->thePacket() = &bufPtr;
+  char* charPacketSize = h_->totalPacketSize();
+  unsigned int intPacketSize = reinterpret_cast<unsigned int>(charPacketSize);
+  sendto(sockfd, (const char*) h_->thePacket(), strlen(intPacketSize), 0, res->ai_addr, res->ai_addrlen);
+  //sendto(sockfd, (const char *) hello, strlen(hello),
+          // 0, res->ai_addr, res->ai_addrlen);
+  // Send packet buffer into the sendto or send socket function
+
 
 
   // open file in binary mode

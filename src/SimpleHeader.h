@@ -2,7 +2,7 @@
 #define __SIMPLEHEADER_H
 
 #include <cstdint>
-// maximum size for the payload 
+// maximum size for the payload
 #define DATA_SZ 1024
 // size of header
 #define HEADER_SZ 4
@@ -29,10 +29,10 @@ private:
 
   // start index of val header field
   const int VL=0;
-  
+
   // start index of TR field
   const int indTr = 0;
-  
+
   // start index of Window field
   const int Win = 0;
 
@@ -41,7 +41,7 @@ private:
 
   // start index of payload
   const int indPL = 0;
-  
+
 public:
   // default constructor initializes the header to zero.
   SimpleHeader();
@@ -60,7 +60,7 @@ public:
   // sets the value field of the header.
   // If the val is not between 0..3, the value set is 0
   void setVal(unsigned int val);
-  
+
    // returns the val field of the header. Must be between 0..3 since
   //  it is a 2 bit value
   unsigned int getType() const;
@@ -68,13 +68,13 @@ public:
   // sets the value field of the header.
   // If the type is not between 0..3, the value set is 0
   void setType(unsigned int type);
-  
+
   // Retrieves the value of TR (1 bit value)
   unsigned int getTR() const;
 
   // Sets the value of TR to a specified value
   void setTR(unsigned int tr);
-  
+
   // Retrieves the value of Window (8 bit value)
   unsigned int getWindow() const;
 
@@ -86,13 +86,12 @@ public:
 
   // Sets the value of SeqNum to a specified value
   void setSeqNum(unsigned int seqNum);
-  
+
   // Retrieves the value of payload (8 bit char value)
   char getPayload(int index);
-  
+
   // Sets the value of payload to a specified char value at a certain index
   void setPayload(char payloadVal, int index);
-
 
   // returns the size of the packet, including headers and data
   // to be used with recvfrom() or sendto()
