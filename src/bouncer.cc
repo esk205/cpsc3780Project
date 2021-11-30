@@ -27,6 +27,7 @@
 
 #define MYPORT "5010"	// the port on which we receive
 #define DESTPORT "5000"  // the port where we send packets
+#define SZ 1024 // Set the size for temporary buffer payload for receiver
 
 // How to compile bouncer.cc
 // Step 1) Run in terminal g++ -o bouncer bouncer.cc SimpleHeader.cc -lpthread -lz
@@ -36,10 +37,10 @@
 // testing commit1
 
 #define MAXBUFLEN 512 // Read at most 512 bytes?
-#define SZ 20 // buffer size in main
 
 /* Since we use threads, we declare some global variables first.
-It works just fine to declare the globals outside of a struct, but gathered in a struct just feels you are more in control :)
+   It works just fine to declare the globals outside of a struct, but gathered
+   in a struct just feels you are more in control :)
 */
 
 struct globals_t {
@@ -47,11 +48,9 @@ struct globals_t {
   std::condition_variable cv_timer;  // for the timed wait
   // protect concurrent access by the other thread;
   std::mutex exclude_other_mtx;
-
 };
 
 struct globals_t gl;
-
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -61,7 +60,6 @@ void *get_in_addr(struct sockaddr *sa)
 
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
-
 
 // creates the socket for receiving, using family to identify the protocol and port for the port we will be receiving on
 // family = AF_INET or AF_INET6 or AF_UNSPEC
@@ -112,7 +110,6 @@ int create_sock_recv(int family, const char * port) {
   return the_sock;
 }
 
-
 // creates the socket for sending, using family to identify the protocol and port to send to
 // family = AF_INET or AF_INET6 or AF_UNSPEC
 // port = string representing the port number we send to
@@ -159,7 +156,6 @@ int create_sock_send(int family, const char * port, const char * dest_host) {
 
   return sockfd;
 }
-
 
 // ********** the workers ***********
 // the sender thread;
@@ -209,26 +205,20 @@ void send_thread(int sockfd) {
   // set Seq num
   h_->setSeqNum(5);
   // set Length
-  // set Payload
   h_->setPayloadLength(0x1234);
+  // set Payload
   h_->setPayload('a', 0);
   // do packet function call
-  //h_->thePacket() = &bufPtr;
 
-  //const char* charPacketSize = h_->totalPacketSize(); // unsigned int to char*
-  std::cout << "The value of packetSize is " << h_->totalPacketSize() << std::endl;
-  //std::cout << "The length of packetSize is " << strlen(h_->totalPacketSize()) << std::endl;
-
-//  const char* packetSize = h_->totalPacketSize();
+  //std::cout << "The value of packetSize is " << h_->totalPacketSize() << std::endl;
   unsigned int packetSize = reinterpret_cast<unsigned int>(h_->totalPacketSize()); // char* to unsigned int
-  std::cout << "The new value of packetSize is " << packetSize << std::endl;
+  //std::cout << "The new value of packetSize is " << packetSize << std::endl;
+
   // unsigned int to const char*
   sendto(sockfd, (const char*) h_->thePacket(), packetSize, 0, res->ai_addr, res->ai_addrlen);
   //sendto(sockfd, (const char *) hello, strlen(hello),
           // 0, res->ai_addr, res->ai_addrlen);
   // Send packet buffer into the sendto or send socket function
-
-
 
   // open file in binary mode
   of.open("one.bin", std::ios::binary | std::ios::out);
@@ -242,7 +232,7 @@ void send_thread(int sockfd) {
     buf[0] = gl.value;
     // calculate the crc32 val
     crc = crc32(crc, reinterpret_cast<const Bytef*>(bufPtr), MAXBUFLEN);
-    std::cout<<"\nThis is the value of crc " << crc << std::endl;
+    //std::cout<<"\nThis is the value of crc " << crc << std::endl;
     if (send(sockfd, buf, 1, 0) != 1) {
       std::cerr << "Sender thread: " << std::strerror(errno) << std::endl;
     }
@@ -258,13 +248,42 @@ void send_thread(int sockfd) {
 
 // the receiver thread;
 // sockfd: socket opened for receiving the datagrams
+/*
+Work on the receiver: start with the code you developed for Project Assignent 2. Modify
+the main function to handle the command line arguments for the receiver. In the receiver
+thread, open the file for writing, as binary.
+Receive the data packet in the receiver thread and save the payload to the file. Test that the
+file received is intact by running diff between the file used as source (at sender)
+and the file saved by the receiver.
+*/
 void recv_thread(int sockfd) {
   char s[INET6_ADDRSTRLEN];
   socklen_t addr_len;
   int numbytes;
   struct sockaddr_storage their_addr;
   char buf[MAXBUFLEN];
+  std::ifstream of;
 
+/*
+  // In the receiver thread, open the file for writing, as binary
+  if (of.fail()) {
+    std::cout << "Cannot create file" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  // write at most 1024 bytes in it
+  char payload[SZ];
+  for (int i = 0; i <= 5; i++) {
+    buf[i] = i;
+  }
+  // Write to file
+  /*
+  Receive the data packet in the receiver thread and save the payload to the file.
+  Test that the file received is intact by running diff between the file used
+  as source (at sender) and the file saved by the receiver.
+
+  of.write(buf, SZ);
+*/
   addr_len = sizeof(their_addr);
 
   while (1) {
@@ -279,7 +298,8 @@ void recv_thread(int sockfd) {
 		s, sizeof s) << std::endl;
 
     // modify the global value
-    // should protect next assignment with a lock, but the other thread only reads, so no problem so far
+    // should protect next assignment with a lock, but the other thread only
+    // reads, so no problem so far
     gl.value = buf[0];
 
     // wake up the sender
@@ -297,6 +317,9 @@ int main(int argc, const char* argv[])
   std::ofstream of;
   int sock_send, sock_recv;  // one socket for sending, another for receiving
   char buf[SZ];
+
+  // Modify the main function to handle the command line arguments for
+  // the receiver.
 
   // are args OK?
   if (argc != 2) {
