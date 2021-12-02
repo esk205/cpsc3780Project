@@ -26,17 +26,23 @@
 #include "SimpleHeader.h"
 
 #define MYPORT "5010"	// the port on which we receive
-#define DESTPORT "5000"  // the port where we send packets
-#define SZ 1024 // Set the size for temporary buffer payload for receiver
+#define DESTPORT "5000" // the port where we send packets
+#define SZ 128 // Set the size for temporary buffer payload for receiver
+
+// we want to print the character AND the space as an atomic operation, i.e.
+// once a thread prints a character, another thread should not print something else.
+std::mutex print_mutex;
+
+void wipeBuffer(char* buf, int n);
 
 // How to compile bouncer.cc
-// Step 1) Run in terminal g++ -o bouncer bouncer.cc SimpleHeader.cc -lpthread -lz
-// Step 2) Run the generated executable bouncer by running ./bouncer
+// Step 1) Run in terminal g++ -std=c++11 -o bouncer bouncer.cc SimpleHeader.cc -lpthread -lz
+// Step 2) Run the generated executable bouncer by running ./bouncer 127.0.0.1
+// Step 3) Run in a different terminal the appropriate netcat command if needed
 
 /* Cmd line arguments: bouncer destination_addr */
-// testing commit1
 
-#define MAXBUFLEN 512 // Read at most 512 bytes?
+#define MAXBUFLEN 128 // Read at most 512 bytes?
 
 /* Since we use threads, we declare some global variables first.
    It works just fine to declare the globals outside of a struct, but gathered
@@ -174,7 +180,7 @@ void send_thread(int sockfd) {
   std::ofstream of;
   int numbytes;
   char buf[MAXBUFLEN]; // read at most 512 bytes
-  buf[512] = '\0';
+  buf[128] = '\0';
   char* bufPtr = buf;
   unsigned long crc;
   struct addrinfo hints, *res;
@@ -188,9 +194,9 @@ void send_thread(int sockfd) {
     the entire buffer to the sendto or send socket function. First, just implement the send. You can receive
     with netcat, dump the packet to a file, and examine the file with hexdump to make sure the packet looks all right.
 
-    So, in this first attempt, you do not need any getter functions from the header class, just setters. Remember
-    that the sample header class I provided had a function that returns a pointer to the entire packet. You can use that
-    function in the sendto call.
+    So, in this first attempt, you just need setters. Remember that the sample
+    header class I provided had a function that returns a pointer to the entire packet.
+    You can use that function in the sendto call.
   */
 
   // create a packet object
@@ -207,7 +213,7 @@ void send_thread(int sockfd) {
   // set Length
   h_->setPayloadLength(0x1234);
   // set Payload
-  h_->setPayload('a', 0);
+  h_->setEntirePayload("Hello", strlen("Hello"));
   // do packet function call
 
   //std::cout << "The value of packetSize is " << h_->totalPacketSize() << std::endl;
@@ -216,8 +222,6 @@ void send_thread(int sockfd) {
 
   // unsigned int to const char*
   sendto(sockfd, (const char*) h_->thePacket(), packetSize, 0, res->ai_addr, res->ai_addrlen);
-  //sendto(sockfd, (const char *) hello, strlen(hello),
-          // 0, res->ai_addr, res->ai_addrlen);
   // Send packet buffer into the sendto or send socket function
 
   // open file in binary mode
@@ -228,16 +232,18 @@ void send_thread(int sockfd) {
   }
 
   while (1) {
+    wipeBuffer(buf, 128);
     // send then wait on cv
     buf[0] = gl.value;
+    std::cout<<"The value of buf[0] is " << buf[0] << std::endl;
+    std::cout<<"The value of h_->thePacket() is " << h_->thePacket() << std::endl;
     // calculate the crc32 val
     crc = crc32(crc, reinterpret_cast<const Bytef*>(bufPtr), MAXBUFLEN);
     //std::cout<<"\nThis is the value of crc " << crc << std::endl;
     if (send(sockfd, buf, 1, 0) != 1) {
       std::cerr << "Sender thread: " << std::strerror(errno) << std::endl;
     }
-
-    if (gl.cv_timer.wait_for(lock, std::chrono::milliseconds(3000)) == std::cv_status::timeout) {
+    if (gl.cv_timer.wait_for(lock, std::chrono::milliseconds(1000)) == std::cv_status::timeout) {
       // we can do something here in case our sleep was interrupted; for this problem, we don't need to do anything
     }
     else {
@@ -256,21 +262,33 @@ thread, open the file for writing, as binary.
 file received is intact by running diff between the file used as source (at sender)
 and the file saved by the receiver.
 */
+void wipeBuffer(char* buf, int n){
+   for(int i=0; i<n; i++){
+     buf[i] = 0;
+   }
+}
 void recv_thread(int sockfd) {
   char s[INET6_ADDRSTRLEN];
   socklen_t addr_len;
-  int numbytes;
+  int numbytes, n;
+  unsigned int len;
+  struct sockaddr_in cliaddr;
   struct sockaddr_storage their_addr;
   char buf[MAXBUFLEN];
   std::ifstream of;
 
+  // Captures the first message
+  n = recvfrom(sockfd, (char *) buf, SZ, 0, (struct sockaddr *) &cliaddr, &len);
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  printf("Start : %d\n", n);
+  buf[n] = '\0';
+  printf("Client : %s\n", buf);
 /*
   // In the receiver thread, open the file for writing, as binary
   if (of.fail()) {
     std::cout << "Cannot create file" << std::endl;
     exit(EXIT_FAILURE);
   }
-
   // write at most 1024 bytes in it
   char payload[SZ];
   for (int i = 0; i <= 5; i++) {
@@ -281,21 +299,23 @@ void recv_thread(int sockfd) {
   Receive the data packet in the receiver thread and save the payload to the file.
   Test that the file received is intact by running diff between the file used
   as source (at sender) and the file saved by the receiver.
-
   of.write(buf, SZ);
 */
   addr_len = sizeof(their_addr);
-
   while (1) {
+    n = 0;
+    wipeBuffer(buf, n);
+    std::cout << "The buffer[0] is " << buf[0] << "\n";
     if ((numbytes = recvfrom(sockfd, buf, MAXBUFLEN-1 , 0,
 			     (struct sockaddr *)&their_addr, &addr_len)) == -1) {
+      std::cout << "In the if statement in receiver thread" << std::endl;
       std::cerr << "receiver: " << std::strerror(errno) << std::endl;
     }
-
-    std::cout << "receiver: " << buf[0] << " from " <<
-      inet_ntop(their_addr.ss_family,
-		get_in_addr((struct sockaddr *)&their_addr),
-		s, sizeof s) << std::endl;
+    //std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    n = recvfrom(sockfd, (char *) buf, SZ, 0, (struct sockaddr *) &cliaddr, &len);
+    printf("Start : %d\n", n);
+    buf[n] = '\0';
+    printf("Client : %s\n", buf);
 
     // modify the global value
     // should protect next assignment with a lock, but the other thread only
@@ -306,7 +326,6 @@ void recv_thread(int sockfd) {
     gl.cv_timer.notify_one();
   }
 }
-
 /*
 First, modify the main function to handle the optional file parameter
 from the project documentation. Open the file for reading as a binary file.
