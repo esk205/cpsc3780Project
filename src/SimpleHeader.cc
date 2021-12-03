@@ -71,7 +71,7 @@ unsigned int SimpleHeader::getSeqNum() const {
 
 void SimpleHeader::setSeqNum(unsigned int seqNum) {
   // clear the val first
-  packet.header[indSeqNum] &= 0x7; // three 1's 
+  packet.header[indSeqNum] &= 0x7; // three 1's
 
   // set the lowest 2 bits of val to the header field, but do not disturb the other bits
   packet.header[indSeqNum] |= (seqNum << 3);
@@ -81,9 +81,18 @@ void SimpleHeader::setSeqNum(unsigned int seqNum) {
 char SimpleHeader::getPayload(int index){
  return packet.data[index];
 }
+char* SimpleHeader::getEntirePayload(){
+  return packet.data;
+}
 
 void SimpleHeader::setPayload(char payloadVal, int index) {
 // set character 8 bits 5 header positions
-// do not need to clear payload 
+// do not need to clear payload
    packet.data[index] = payloadVal;
+}
+void SimpleHeader::setEntirePayload(char* payloadVal, unsigned int size) {
+   char* payloadValue = reinterpret_cast<char*>(payloadVal);
+   for(int i = 0; i < size; i++){
+     packet.data[i] = *payloadValue;
+   }
 }

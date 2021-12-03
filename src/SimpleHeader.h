@@ -89,8 +89,13 @@ public:
   // Retrieves the value of payload (8 bit char value)
   char getPayload(int index);
 
+  char* getEntirePayload();
+
   // Sets the value of payload to a specified char value at a certain index
   void setPayload(char payloadVal, int index);
+
+  // Sets the value of payload to a specified char value at a certain index
+  void setEntirePayload(char* payloadVal, unsigned int size);
 
   // returns the size of the packet, including headers and data
   // to be used with recvfrom() or sendto()
