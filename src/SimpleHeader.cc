@@ -90,9 +90,9 @@ void SimpleHeader::setPayload(char payloadVal, int index) {
 // do not need to clear payload
    packet.data[index] = payloadVal;
 }
+
 void SimpleHeader::setEntirePayload(char* payloadVal, unsigned int size) {
-   char* payloadValue = reinterpret_cast<char*>(payloadVal);
-   for(int i = 0; i < size; i++){
-     packet.data[i] = *payloadValue;
+   for(unsigned int i = 0; i < size; i++){
+     packet.data[i] = payloadVal[i];
    }
 }
