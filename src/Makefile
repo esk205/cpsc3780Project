@@ -1,15 +1,15 @@
-CC = g++11
+CC = g++
 # Think of test libs as telling what libraries to include 
-TESTLIBS = -lgtest  -lgtest_main -lpthread
+TESTLIBS = -lz -lpthread # -lgtest  -lgtest_main 
 OBJS = SimpleHeader.o #test_header.o
-# HEADERDIRS =
-CCFLAGS = --std=c++11
+HEADERDIRS = SimpleHeader.h bouner.cc
+CCFLAGS = --std=c++11 
 
-# rename bouncer to rename the executable file generated
+# In order to rename the executable file generated rename bouncer on line 11
 # In order to run the make file run 'make' in the terminal (make sure you're in the 
 # same directory as the Makefile without the single quotations
 bouncer: $(OBJS)
-	$(CC) -o $@ -L. $(OBJS) $(TESTLIBS)
+	$(CC) -o $@ -L. $(OBJS) $(TESTLIBS) $(HEADERDIRS)
 
 %.o : %.cc
 	$(CC) $(CCFLAGS) -c $<
@@ -18,7 +18,7 @@ bouncer: $(OBJS)
 
 .PHONY : clean
 clean :
-	rm -f *.o *~ *.d
+	rm -f *.o *~ *.d bouncer
 
 
 ## include the generated dependency files
