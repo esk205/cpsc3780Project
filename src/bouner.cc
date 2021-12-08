@@ -102,7 +102,7 @@ void wipeBuffer(char* &buf, int n){
 void send_thread(int sockfd) {
   std::ifstream in_stream;
   unsigned long crc;
-  crc = crc32(0L, NULL, 0);
+  //crc = crc32(0L, NULL, 0);
 
   /*
     Therefore, you create a header object (use the header class you tested in Project Assignment 1), then pass
@@ -131,7 +131,7 @@ void send_thread(int sockfd) {
     std::cout << "Cannot create file" << std::endl;
     exit(EXIT_FAILURE);
   }
-	
+
   std::vector<char> v_buf(MAXBUFLEN, 0);
   in_stream.read(v_buf.data(), MAXBUFLEN);
   auto bytes_read = in_stream.gcount();
@@ -142,22 +142,22 @@ void send_thread(int sockfd) {
   h_->setPayloadLength(v_buf.size());
 
   // create a mutex and a lock for the condition variable
-  // std::unique_lock<std::mutex> lock(gl.exclude_other_mtx);
-  
+  std::unique_lock<std::mutex> lock(gl.exclude_other_mtx);
+
   while (1) {
 	// calc crc
-    crc = crc32(crc, reinterpret_cast<const Bytef*>(v_buf.data()), v_buf.size());
+    //crc = crc32(crc, reinterpret_cast<const Bytef*>(v_buf.data()), v_buf.size());
 	// std::cout << "This is the value of crc " << crc << std::endl;
     if (send(sockfd, h_->thePacket(), h_->totalPacketSize(), 0) < 0) {
       std::cerr << "Sender thread: " << std::strerror(errno) << std::endl;
     }
-    /*
-	if (gl.cv_timer.wait_for(lock, std::chrono::milliseconds(1000)) == std::cv_status::timeout) {
+
+  	if (gl.cv_timer.wait_for(lock, std::chrono::milliseconds(1000)) == std::cv_status::timeout) {
       // we can do something here in case our sleep was interrupted; for this problem, we don't need to do anything
     }
     else {
       // we can do something in case the timer expired. Nothing for us now.
-    }*/
+    }
 
 	// gl.cv_timer.wait(lock);
   }
@@ -206,35 +206,35 @@ int create_sock_recv(int family, const char * port, const char* host) {
 
 void recv_thread(int sockfd) {
   int nRead;
+  std::ofstream out_stream;
   std::vector<char> buf(1024, 0);
   SimpleHeader pHeader;
   simplepacket* pPacket = (simplepacket*)pHeader.thePacket();
   memset(pPacket, 0, sizeof(simplepacket));
-  std::ofstream out_stream;
 
   // In the receiver thread, open the file for writing, as binary
-  out_stream.open(filename);
+  out_stream.open("save.bin", std::ios::binary);
+
   if (!out_stream.is_open()) {
     std::cout << "Cannot create file" << std::endl;
     exit(EXIT_FAILURE);
   }
-  
+
   while (1) {
-    {
-        std::unique_lock<std::mutex> l(gl.exclude_other_mtx);
+    //std::unique_lock<std::mutex> l(gl.exclude_other_mtx);
 
 	if ((nRead = ::recv(sockfd, buf.data(), 1024, 0)) < 0) {
-            std::cerr << "receiver: " << std::strerror(errno) << std::endl;
+      std::cerr << "receiver: " << std::strerror(errno) << std::endl;
     }
 
 	buf.resize(nRead);
 	memcpy(pPacket, buf.data(), buf.size());
 	out_stream << pPacket->data;
 	// std::cout << pPacket->data << std::endl;
-}
+	out_stream.close();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    
+
 	// wake up the sender
     //gl.cv_timer.notify_one();
   }
@@ -246,12 +246,11 @@ int main(int argc, const char* argv[])
   int sock_send;  // one socket for sending, another for receiving
   int sock_recv;  // one socket for sending, another for receiving
 
-
   // Modify the main function to handle the command line arguments for
   // the receiver.
 
-  if (argc != 3) {
-    std::cerr << "Usage: " << argv[0] << " destination_addr" <<"filename" << std::endl;
+  if (argc != 2) {
+    std::cerr << "Usage: " << argv[0] << " destination_addr" << std::endl;
     return 2;
   }
 
@@ -265,17 +264,16 @@ int main(int argc, const char* argv[])
     std::cerr << "I failed" << std::endl;
     return 1;
   }
-  std::string filename=argv[2];
+
   // start the threads
   std::thread tsender(send_thread, sock_send);
   std::thread treceiver(recv_thread, sock_recv);
 
   tsender.join();
   treceiver.join();
-  
+
   close(sock_send);
   close(sock_recv);
 
-  out_stream.close();
   return 0;
 }
