@@ -206,31 +206,32 @@ int create_sock_recv(int family, const char * port, const char* host) {
 
 void recv_thread(int sockfd) {
   int nRead;
-  std::ofstream out_stream;
   std::vector<char> buf(1024, 0);
   SimpleHeader pHeader;
   simplepacket* pPacket = (simplepacket*)pHeader.thePacket();
   memset(pPacket, 0, sizeof(simplepacket));
+  std::ofstream out_stream;
 
   // In the receiver thread, open the file for writing, as binary
-  out_stream.open("/home/sone/save.bin", std::ios::app | std::ios::binary);
+  out_stream.open(filename);
   if (!out_stream.is_open()) {
     std::cout << "Cannot create file" << std::endl;
     exit(EXIT_FAILURE);
   }
   
   while (1) {
-    //std::unique_lock<std::mutex> l(gl.exclude_other_mtx);
+    {
+        std::unique_lock<std::mutex> l(gl.exclude_other_mtx);
 
 	if ((nRead = ::recv(sockfd, buf.data(), 1024, 0)) < 0) {
-      std::cerr << "receiver: " << std::strerror(errno) << std::endl;
+            std::cerr << "receiver: " << std::strerror(errno) << std::endl;
     }
 
 	buf.resize(nRead);
 	memcpy(pPacket, buf.data(), buf.size());
 	out_stream << pPacket->data;
 	// std::cout << pPacket->data << std::endl;
-	out_stream.close();
+}
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     
@@ -245,11 +246,12 @@ int main(int argc, const char* argv[])
   int sock_send;  // one socket for sending, another for receiving
   int sock_recv;  // one socket for sending, another for receiving
 
+
   // Modify the main function to handle the command line arguments for
   // the receiver.
 
-  if (argc != 2) {
-    std::cerr << "Usage: " << argv[0] << " destination_addr" << std::endl;
+  if (argc != 3) {
+    std::cerr << "Usage: " << argv[0] << " destination_addr" <<"filename" << std::endl;
     return 2;
   }
 
@@ -263,7 +265,7 @@ int main(int argc, const char* argv[])
     std::cerr << "I failed" << std::endl;
     return 1;
   }
-
+  std::string filename=argv[2];
   // start the threads
   std::thread tsender(send_thread, sock_send);
   std::thread treceiver(recv_thread, sock_recv);
@@ -274,5 +276,6 @@ int main(int argc, const char* argv[])
   close(sock_send);
   close(sock_recv);
 
+  out_stream.close();
   return 0;
 }
