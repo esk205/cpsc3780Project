@@ -1,6 +1,6 @@
 CC = g++
 # Think of test libs as telling what libraries to include 
-TESTLIBS = -lz -lpthread # -lgtest  -lgtest_main 
+TESTLIBS = -lz -lpthread -pthread # -lgtest  -lgtest_main 
 OBJS = SimpleHeader.o #test_header.o
 HEADERDIRS = SimpleHeader.h bouner.cc
 CCFLAGS = --std=c++11 
